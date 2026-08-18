@@ -1,3 +1,4 @@
+<img width="1765" height="885" alt="workflow" src="https://github.com/user-attachments/assets/c9fae462-27fc-43aa-824c-35aceaec7648" />
 # AI Ops Assistant
 
 ## Project Overview
