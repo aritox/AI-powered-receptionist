@@ -1,0 +1,54 @@
+[
+  {
+    "customer_name": "Sofia Rivera",
+    "customer_email": "sofia.rivera@example.com",
+    "request_type": "General Question",
+    "message": "Can I trade gold and EUR/USD on the platform?",
+    "expected": {
+      "department": "Customer Support",
+      "priority": "Low",
+      "requires_human_review": false
+    }
+  },
+  {
+    "customer_name": "Alice Martin",
+    "customer_email": "alice.martin@example.com",
+    "request_type": "Verification / KYC",
+    "message": "My passport verification has failed twice even though the document is valid.",
+    "expected": {
+      "department": "Compliance",
+      "requires_human_review": true
+    }
+  },
+  {
+    "customer_name": "Noah Bennett",
+    "customer_email": "noah.bennett@example.com",
+    "request_type": "Security Concern",
+    "message": "I noticed several transactions in my account that I do not recognize.",
+    "expected": {
+      "department": "Compliance",
+      "priority": "High",
+      "requires_human_review": true
+    }
+  },
+  {
+    "customer_name": "Maya Chen",
+    "customer_email": "maya.chen@example.com",
+    "request_type": "Trading Issue",
+    "message": "The BTC trading screen returns an error every time I try to submit an order.",
+    "expected": {
+      "department": "Trading Operations",
+      "requires_human_review": true
+    }
+  },
+  {
+    "customer_name": "Daniel Reed",
+    "customer_email": "daniel.reed@example.com",
+    "request_type": "Deposit / Withdrawal",
+    "message": "My withdrawal has been pending since yesterday and I have not received the funds.",
+    "expected": {
+      "department": "Customer Support",
+      "requires_human_review": true
+    }
+  }
+]

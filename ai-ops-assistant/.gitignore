@@ -1,0 +1,34 @@
+# Environment files and local secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+secrets/
+credentials/
+
+# n8n local/private state
+.n8n/
+n8n-data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Generated logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor and temporary files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.tmp
+*.temp
