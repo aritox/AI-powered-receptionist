@@ -1,0 +1,805 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Operations Request",
+        "formDescription": "Submit an operational request for AI-assisted triage.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Request Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "General Question"
+                  },
+                  {
+                    "option": "Account Issue"
+                  },
+                  {
+                    "option": "Deposit / Withdrawal"
+                  },
+                  {
+                    "option": "Trading Issue"
+                  },
+                  {
+                    "option": "Security Concern"
+                  },
+                  {
+                    "option": "Verification / KYC"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Message",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e22ff09f-1370-40bb-bc3a-725af1208f8b",
+      "name": "On form submission",
+      "webhookId": "28442132-fe73-4b98-b9c2-26f2be87a3c5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "52e8770d-ba82-475b-ad6e-a67c2ee1c7e2",
+              "name": "customer_name",
+              "value": "={{ $json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "d2bf6ea8-7e6e-4535-b0ac-f7354db83869",
+              "name": "customer_email",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "80e5b8aa-e500-446c-903c-6c9c5e42ec74",
+              "name": "request_type",
+              "value": "={{ $json[\"Request Type\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "3a2432e7-a7b2-4304-8aae-23998eee19b3",
+              "name": "message",
+              "value": "={{ $json.Message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "5c04a4ed-fb0d-439f-8794-9724417af355",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-oss-20b\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI operations triage assistant. Analyze incoming operational requests for a fintech/trading platform. Classify each request into exactly one department: Customer Support, Compliance, or Trading Operations. Customer Support handles general questions, account questions, deposits, withdrawals, product availability, and ordinary platform assistance. Compliance handles KYC, identity verification, suspicious or unauthorized transactions, security concerns, AML-related issues, and regulatory-sensitive cases. Trading Operations handles order execution issues, trading interface failures, order submission errors, execution anomalies, and trading-system incidents. Assign priority Low, Medium, or High. High is for security concerns, unauthorized activity, suspicious transactions, major trading/execution problems, sensitive compliance issues, or significant customer-funds issues. Medium is for issues requiring employee investigation but not immediately critical. Low is for informational and normal usage questions. Sensitive financial, security, compliance, KYC, withdrawal/deposit investigation, or trading execution issues should require human review. Do not invent account information. Do not claim to have checked an account, processed a withdrawal, approved KYC, executed an order, or performed any action. Do not provide investment advice. The suggested_response must be a short draft response that an employee can review before sending to the customer. It must acknowledge the issue, remain factual, avoid unsupported promises, and recommend the appropriate next step when necessary. CRITICAL RESPONSE RULE: The suggested_response must never claim that any action has already been performed unless the workflow explicitly confirms it. Never say: 'I have escalated this', 'I have flagged this', 'I have forwarded this', 'I checked your account', 'We are investigating this', or 'Your withdrawal is being processed'. Instead use wording such as: 'This should be escalated for review.', 'The appropriate team should investigate this.', 'Your case requires review by the compliance team.', or 'Please secure your account and wait for an authorized team member to review the activity.' The suggested_response must describe the next appropriate step, not pretend that the step has already happened.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"User-selected request type: {{$json.request_type}}\\nCustomer message: {{$json.message}}\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": {\n    \"type\": \"json_schema\",\n    \"json_schema\": {\n      \"name\": \"operations_triage\",\n      \"strict\": true,\n      \"schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"department\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"Customer Support\",\n              \"Compliance\",\n              \"Trading Operations\"\n            ]\n          },\n          \"category\": {\n            \"type\": \"string\"\n          },\n          \"priority\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"Low\",\n              \"Medium\",\n              \"High\"\n            ]\n          },\n          \"sentiment\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"Neutral\",\n              \"Positive\",\n              \"Frustrated\",\n              \"Concerned\",\n              \"Angry\"\n            ]\n          },\n          \"summary\": {\n            \"type\": \"string\"\n          },\n          \"requires_human_review\": {\n            \"type\": \"boolean\"\n          },\n          \"suggested_response\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"department\",\n          \"category\",\n          \"priority\",\n          \"sentiment\",\n          \"summary\",\n          \"requires_human_review\",\n          \"suggested_response\"\n        ],\n        \"additionalProperties\": false\n      }\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2d0a0c36-a011-45cf-84d8-c33f27c688be",
+      "name": "Groq - Analyze Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "xU6NA5kJCKnYqZeT",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3f754f12-7cb6-4e0f-84f8-122b3f64bbd4",
+              "name": "department",
+              "value": "={{ JSON.parse($json.choices[0].message.content).department }}",
+              "type": "string"
+            },
+            {
+              "id": "73a8c062-8a7a-4af1-82e1-cf4e13b3c63f",
+              "name": "category",
+              "value": "={{ JSON.parse($json.choices[0].message.content).category }}",
+              "type": "string"
+            },
+            {
+              "id": "5b686be1-4904-4be7-bdf7-4ea0315490ea",
+              "name": "priority",
+              "value": "={{ JSON.parse($json.choices[0].message.content).priority }}",
+              "type": "string"
+            },
+            {
+              "id": "1b26dd81-f089-4bf2-8716-dc69cf291062",
+              "name": "sentiment",
+              "value": "={{ JSON.parse($json.choices[0].message.content).sentiment }}",
+              "type": "string"
+            },
+            {
+              "id": "ca90497c-a653-4937-87d8-a981431a4e1f",
+              "name": "summary",
+              "value": "={{ JSON.parse($json.choices[0].message.content).summary }}",
+              "type": "string"
+            },
+            {
+              "id": "2a012112-4e6c-4a29-ac9a-4bb9aff9a164",
+              "name": "requires_human_review",
+              "value": "={{ JSON.parse($json.choices[0].message.content).requires_human_review }}",
+              "type": "boolean"
+            },
+            {
+              "id": "a9fe17cc-fc36-4233-b0ae-400458e651a0",
+              "name": "suggested_response",
+              "value": "={{ JSON.parse($json.choices[0].message.content).suggested_response }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "13c0b05f-531c-4ac7-b073-13261c9531a5",
+      "name": "Extract Structured Analysis"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Customer Support",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3877e2c1-2f73-4f25-a8b9-ad6caa0e7317"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Customer Support"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "59dcff26-f88e-4549-b14d-4e143b3f4250",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Compliance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Compliance"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b81f6a97-5f65-4e14-87e2-518baf61c248",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Trading Operations",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Trading Operations"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "44f8205e-0e63-4563-aa7c-12e3aa57f8ad",
+      "name": "Route by Department"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3b45d55c-e9dd-43ee-a925-55a339cef077",
+              "name": "department_route",
+              "value": "Compliance",
+              "type": "string"
+            },
+            {
+              "id": "5a2a83a3-fc23-40ce-beab-eca9fd5923c9",
+              "name": "routing_status",
+              "value": "Routed successfully",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        -64
+      ],
+      "id": "b3128532-7cb9-4e89-a7dd-dbcbc25b6fd5",
+      "name": "Compliance Queue"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "951229b3-df5c-416e-a73a-cbbedce5bf5a",
+              "name": "department_route",
+              "value": "Customer Support",
+              "type": "string"
+            },
+            {
+              "id": "67073784-0d1a-41ae-a6b0-56f516c4a47f",
+              "name": "routing_status",
+              "value": "Routed successfully",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        -320
+      ],
+      "id": "00315a95-4f1b-40f0-9b66-1a3e3cf9de68",
+      "name": "Customer Support Queue"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "44f5712a-307e-4952-bf7f-522946e4ca8f",
+              "name": "department_route",
+              "value": "Trading Operations",
+              "type": "string"
+            },
+            {
+              "id": "67922b23-6614-406a-8ae7-6551d1026797",
+              "name": "routing_status",
+              "value": "Routed successfully",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        192
+      ],
+      "id": "0d7f2793-897d-47fe-b994-a70c4036939b",
+      "name": "Trading Operations Queue"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8cbe2a59-fa7a-44a6-9bb0-9ed2ef98c497",
+              "leftValue": "={{ $json.requires_human_review }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "aac01bd7-5253-4905-a64f-5b2272b29574",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "1eee5956-2395-4d86-affb-b1b5a9645354",
+              "leftValue": "={{ $json.department }}",
+              "rightValue": "Compliance",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        -480
+      ],
+      "id": "b32c4fbc-726d-4b1c-ba65-8dd61c38d6b5",
+      "name": "Human Review Required?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1d59d79-5919-42c6-bf43-bbe74873eff3",
+              "name": "review_status",
+              "value": "Human review required",
+              "type": "string"
+            },
+            {
+              "id": "94ae78fd-b536-4a8b-aa62-0e9263e90c6e",
+              "name": "workflow_status",
+              "value": "Paused for human review",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        -448
+      ],
+      "id": "235b650c-bed3-4f32-b3b9-a88727ad9b96",
+      "name": "Human Review Queue"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42f75498-8974-4857-b47f-986290975123",
+              "name": "review_status",
+              "value": "No human review required",
+              "type": "string"
+            },
+            {
+              "id": "deafa2ea-31b4-46aa-87aa-846fc28b9d06",
+              "name": "workflow_status",
+              "value": "Eligible for assisted handling",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2032,
+        48
+      ],
+      "id": "759516f5-807c-4bf3-8acb-851ab177ff61",
+      "name": "Assisted Flow"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "ATkUNeWJxXseZ93q",
+          "mode": "list",
+          "cachedResultName": "ai_ops_audit_log",
+          "cachedResultUrl": "/projects/xG8ILPM76qUJlGaY/datatables/ATkUNeWJxXseZ93q"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "requires_human_review": "={{ $json.requires_human_review }}",
+            "department": "={{ $json.department }}",
+            "category": "={{ $json.category }}",
+            "priority": "={{ $json.priority }}",
+            "sentiment": "={{ $json.sentiment }}",
+            "summary": "={{ $json.summary }}",
+            "department_route": "={{ $json.department_route }}",
+            "routing_status": "={{ $json.routing_status }}",
+            "review_status": "={{ $json.review_status }}",
+            "workflow_status": "={{ $json.workflow_status }}",
+            "suggested_response": "={{ $json.suggested_response }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "department",
+              "displayName": "department",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "sentiment",
+              "displayName": "sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "requires_human_review",
+              "displayName": "requires_human_review",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "department_route",
+              "displayName": "department_route",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "routing_status",
+              "displayName": "routing_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "review_status",
+              "displayName": "review_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "workflow_status",
+              "displayName": "workflow_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "suggested_response",
+              "displayName": "suggested_response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2368,
+        -16
+      ],
+      "id": "c095f8d5-0f82-48db-9818-41fd7f33fcc5",
+      "name": "Log Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Groq - Analyze Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq - Analyze Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Structured Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Structured Analysis": {
+      "main": [
+        [
+          {
+            "node": "Route by Department",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Department": {
+      "main": [
+        [
+          {
+            "node": "Customer Support Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Compliance Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trading Operations Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Queue": {
+      "main": [
+        [
+          {
+            "node": "Human Review Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Support Queue": {
+      "main": [
+        [
+          {
+            "node": "Human Review Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trading Operations Queue": {
+      "main": [
+        [
+          {
+            "node": "Human Review Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review Required?": {
+      "main": [
+        [
+          {
+            "node": "Human Review Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Assisted Flow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review Queue": {
+      "main": [
+        [
+          {
+            "node": "Log Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assisted Flow": {
+      "main": [
+        [
+          {
+            "node": "Log Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "06583984-c5c5-432a-91a6-4b3aa2335567",
+  "meta": {
+    "instanceId": "9c5b9f23fe59464b36a09b02ff782053a649dbc83f8e047a3ec7d22efb8479a5"
+  },
+  "id": "aDJ57uchvb2wZTCU",
+  "tags": []
+}
